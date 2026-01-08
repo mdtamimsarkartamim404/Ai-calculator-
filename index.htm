@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#10b981">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogInNtYXJ0IE9qb24gQ2FsY3VsYXRvciIsCiAgInNob3J0X25hbWUiOiAiT2pvbiBDYWxjIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmZmZmZmYiLAogICJ0aGVtZV9jb2xvciI6ICIjMTBiOTgxIgp9">
+
+    <title>স্মার্ট ওজন ক্যালকুলেটর</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #000; overflow: hidden; height: 100vh; width: 100vw; }
+        
+        .app-container { 
+            max-width: 448px; 
+            margin: 0 auto; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            background: #fff; 
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Display Area */
+        .display-area { 
+            background: #000000; 
+            color: #ffffff; 
+            padding: 15px; 
+            height: 230px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-end; 
+            flex-shrink: 0;
+            box-shadow: inset 0 -20px 40px rgba(16, 185, 129, 0.05);
+        }
+
+        #expression { 
+            text-align: right; 
+            color: #475569; 
+            font-family: 'Courier New', monospace; 
+            font-size: 14px; 
+            height: 20px; 
+            margin-bottom: 2px; 
+            overflow: hidden;
+        }
+        
+        .display-wrapper {
+            position: relative;
+            width: 100%;
+            overflow-x: auto;
+            white-space: nowrap;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            min-height: 60px;
+            scrollbar-width: none;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        .display-wrapper::-webkit-scrollbar { display: none; }
+
+        #displayText { 
+            text-align: right; 
+            color: #fff; 
+            font-weight: 700; 
+            font-family: 'Consolas', monospace; 
+            font-size: 3rem;
+            cursor: text;
+            display: inline-block;
+            position: relative;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 3px;
+            height: 3rem;
+            background-color: #10b981;
+            margin-left: 2px;
+            margin-right: 2px;
+            vertical-align: middle;
+            border-radius: 4px;
+            box-shadow: 0 0 10px #10b981;
+            animation: smart-blink 1.2s infinite;
+        }
+
+        @keyframes smart-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.1; }
+        }
+
+        /* Live Result Area Updated */
+        .live-result { 
+            margin-top: 15px; 
+            border-top: 1px solid rgba(255,255,255,0.08); 
+            padding-top: 10px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-end; 
+        }
+
+        /* Driver Weight Display (Left) */
+        .driver-weight-box {
+            background: rgba(16,185,129,0.08);
+            padding: 8px 12px;
+            border-radius: 10px;
+            border-left: 4px solid #10b981;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .driver-weight-label {
+            font-size: 9px;
+            color: #10b981;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .driver-weight-val {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .driver-weight-unit {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: bold;
+        }
+
+        /* Net Weight Display (Right) */
+        .net-display {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .label { font-size: 10px; color: #10b981; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
+        .net-value { font-size: 2.4rem; font-weight: 900; line-height: 1; display: flex; align-items: baseline; gap: 4px; }
+        .kg-unit { font-size: 0.9rem; font-weight: bold; color: #10b981; }
+
+        /* Tabs */
+        .tabs { display: flex; background: #f8fafc; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; height: 50px; }
+        .tab-btn { flex: 1; border: none; background: transparent; font-size: 13px; font-weight: 800; color: #94a3b8; cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab-btn.active { border-bottom-color: #10b981; color: #1e293b; background: #fff; }
+
+        /* Content Area */
+        .content-area { 
+            flex: 1; 
+            padding: 10px; 
+            overflow: hidden; 
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .view { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+        .view.active { display: flex; }
+
+        /* Calc Grid */
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; height: 100%; }
+        .calc-key { 
+            border: 1px solid #f1f5f9; 
+            border-radius: 12px; 
+            font-size: 22px; 
+            font-weight: 700; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: #fff;
+            color: #1e293b;
+        }
+        .calc-key:active { background: #f1f5f9; transform: scale(0.98); }
+        .key-op { background: #f8fafc; color: #10b981; font-size: 26px; }
+        .key-clear { grid-column: span 2; background: #fff1f2; color: #e11d48; }
+        .key-equal { grid-column: span 2; background: #10b981; color: white; }
+
+        /* Driver List Area */
+        .list-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .add-form { background: #f8fafc; padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px dashed #cbd5e1; flex-shrink: 0; }
+        .form-row { display: flex; gap: 6px; margin-top: 6px; }
+        .form-input { flex: 1; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; min-width: 0; }
+        .add-btn { background: #1e293b; color: #fff; border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
+        .search-area { flex-shrink: 0; margin-bottom: 10px; }
+        .search-box { width: 100%; padding: 10px; border-radius: 10px; background: #f1f5f9; border: 1px solid transparent; font-size: 13px; outline: none; }
+        .driver-scroll { flex: 1; overflow-y: auto; padding-right: 2px; }
+        
+        .driver-card { 
+            padding: 14px; 
+            border-radius: 12px; 
+            background: #fff; 
+            border: 1px solid #f1f5f9; 
+            margin-bottom: 8px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .driver-card.active { border-left: 6px solid #10b981; background: #f0fdf4; }
+        .card-name { font-size: 15px; font-weight: 700; color: #1e293b; }
+        .card-weight { font-size: 18px; font-weight: 800; color: #10b981; }
+
+        /* Footer Status */
+        .status-bar { background: #0f172a; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; color: #94a3b8; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+        #statName { color: #10b981; }
+
+        /* Overlays */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px); }
+        .modal-content { background: #fff; padding: 20px; border-radius: 20px; width: 100%; max-width: 320px; text-align: center; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; }
+
+        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 25px; font-size: 13px; font-weight: 700; z-index: 2000; opacity: 0; transition: all 0.3s ease; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="display-area">
+        <div id="expression"></div>
+        <div class="display-wrapper" id="displayWrapper" onclick="handleDisplayClick(event)">
+            <div id="displayText">0<span class="cursor"></span></div>
+        </div>
+        <div class="live-result">
+            <!-- Left Side: Selected Driver's Tare Weight -->
+            <div class="driver-weight-box">
+                <span class="driver-weight-label">গাড়ির ওজন</span>
+                <div>
+                    <span id="tareVal" class="driver-weight-val">0</span>
+                    <span class="driver-weight-unit">কেজি</span>
+                </div>
+            </div>
+            
+            <!-- Right Side: Net Weight Display -->
+            <div class="net-display">
+                <p class="label">নিট ওজন (Net)</p>
+                <div class="net-value"><span id="netKg">0</span><span class="kg-unit">কেজি</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button id="tabCalc" onclick="showView('calc')" class="tab-btn active">ক্যালকুলেটর</button>
+        <button id="tabList" onclick="showView('list')" class="tab-btn">ড্রাইভার লিস্ট</button>
+    </div>
+
+    <div class="content-area">
+        <div id="calcView" class="view active">
+            <div class="calc-grid">
+                <button onclick="clearAll()" class="calc-key key-clear">AC</button>
+                <button onclick="backspace()" class="calc-key key-op">⌫</button>
+                <button onclick="addOp('/')" class="calc-key key-op">÷</button>
+                <button onclick="addVal('7')" class="calc-key">7</button>
+                <button onclick="addVal('8')" class="calc-key">8</button>
+                <button onclick="addVal('9')" class="calc-key">9</button>
+                <button onclick="addOp('*')" class="calc-key key-op">×</button>
+                <button onclick="addVal('4')" class="calc-key">4</button>
+                <button onclick="addVal('5')" class="calc-key">5</button>
+                <button onclick="addVal('6')" class="calc-key">6</button>
+                <button onclick="addOp('-')" class="calc-key key-op">−</button>
+                <button onclick="addVal('1')" class="calc-key">1</button>
+                <button onclick="addVal('2')" class="calc-key">2</button>
+                <button onclick="addVal('3')" class="calc-key">3</button>
+                <button onclick="addOp('+')" class="calc-key key-op">+</button>
+                <button onclick="addVal('0')" class="calc-key">0</button>
+                <button onclick="addVal('.')" class="calc-key">.</button>
+                <button onclick="execute()" class="calc-key key-equal">=</button>
+            </div>
+        </div>
+
+        <div id="listView" class="view">
+            <div class="list-container">
+                <div class="add-form">
+                    <p class="label">নতুন ড্রাইভার</p>
+                    <div class="form-row">
+                        <input type="text" id="newName" placeholder="নাম" class="form-input">
+                        <input type="number" id="newWeight" placeholder="ওজন" class="form-input">
+                        <button onclick="addNewDriver()" class="add-btn">যোগ</button>
+                    </div>
+                </div>
+                <div class="search-area">
+                    <input type="text" id="search" placeholder="নাম লিখে খুঁজুন..." class="search-box" oninput="filterDrivers()">
+                </div>
+                <div id="driverScroll" class="driver-scroll"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div><span id="statusPulse" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#475569; margin-right:8px;"></span> <span id="statName">সিলেক্ট নেই</span></div>
+        <div id="statTare">গাড়ি: 0 কেজি</div>
+    </div>
+
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color:#e11d48; margin-bottom:10px;">মুছে ফেলবেন?</h3>
+            <p id="modalText" style="color:#64748b; font-size:14px;"></p>
+            <div class="modal-actions">
+                <button onclick="closeModal()" style="background:#f1f5f9; color:#475569;" class="modal-btn">বাতিল</button>
+                <button id="confirmDeleteBtn" style="background:#e11d48; color:#fff;" class="modal-btn">হ্যাঁ, মুছুন</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+</div>
+
+<script>
+    // --- হ্যাপটিক ফিডব্যাক (১ মিলিসেকেন্ড) ---
+    function haptic() {
+        if ("vibrate" in navigator) {
+            navigator.vibrate(1); 
+        }
+    }
+
+    // --- অফলাইন সাপোর্ট (Service Worker) ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('data:text/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiBlLndhaXRVbnRpbChjYWNoZXMub3BlbignY2FjaGUtdjEnKS50aGVuKGMgPT4gYy5hZGQoJy4nKSkpKTsgc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4gZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2goZS5yZXF1ZXN0KS50aGVuKHIgPT4gciB8fCBmZXRjaChlLnJlcXVlc3QpKSkpOw==');
+        });
+    }
+
+    const DB_KEY = 'smart_ojon_db_v15';
+    const createId = () => Date.now() + Math.random().toString(36).substr(2, 5);
+
+    // ৩৮ জন ড্রাইভারের তালিকা
+    const initialDriversData = [
+        {name: "মহাবুর", weight: 1170}, {name: "ভোলা", weight: 550}, {name: "আলতাব", weight: 1110},
+        {name: "আবু", weight: 1250}, {name: "কলাম", weight: 1150}, {name: "আবুল", weight: 1110},
+        {name: "দুলাল", weight: 1250}, {name: "ইমারত", weight: 1120}, {name: "রসুল", weight: 1190},
+        {name: "এছার", weight: 390}, {name: "আমজেদ", weight: 380}, {name: "রিপন", weight: 1360},
+        {name: "কুরবান.", weight: 1060}, {name: "রকিবুল", weight: 1390}, {name: "আমজাদ", weight: 1180},
+        {name: "হাফেজ", weight: 1370}, {name: "সুজন", weight: 1140}, {name: "হুমায়ন", weight: 1070},
+        {name: "মাহতাব", weight: 1250}, {name: "রাজীব", weight: 1120}, {name: "দুলাল ২", weight: 1250},
+        {name: "আরিফ", weight: 1140}, {name: "মামুন", weight: 1080}, {name: "শাওন", weight: 1400},
+        {name: "জরিপ", weight: 1070}, {name: "আসিফ", weight: 820}, {name: "তালেব", weight: 490},
+        {name: "হাসমত", weight: 180}, {name: "মাহাবুল", weight: 350}, {name: "আরব আলী", weight: 510},
+        {name: "হুমায়ন ২", weight: 1080}, {name: "মাহতাব ২", weight: 1150}, {name: "শাহীন", weight: 1290},
+        {name: "মজিবুল", weight: 1030}, {name: "দুলাল ৩", weight: 1250}, {name: "আরিফ ২", weight: 1110},
+        {name: "ফেলু", weight: 190}, {name: "হাফেজ ২", weight: 1440}
+    ];
+
+    let drivers = JSON.parse(localStorage.getItem(DB_KEY)) || initialDriversData.map(d => ({ ...d, id: createId() }));
+
+    let selectedDriver = null;
+    let currentInput = "0";
+    let cursorIndex = 1; 
+    let tapRecords = {};
+
+    const displayEl = document.getElementById('displayText');
+    const expressionEl = document.getElementById('expression');
+    const netEl = document.getElementById('netKg');
+    const tareEl = document.getElementById('tareVal');
+
+    function save() { localStorage.setItem(DB_KEY, JSON.stringify(drivers)); }
+
+    function showView(v) {
+        haptic();
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(v + 'View').classList.add('active');
+        document.getElementById('tab' + v.charAt(0).toUpperCase() + v.slice(1)).classList.add('active');
+    }
+
+    // --- ক্যালকুলেটর ---
+    function addVal(v) {
+        haptic();
+        if (currentInput === "0") { currentInput = v; cursorIndex = 1; }
+        else {
+            currentInput = currentInput.slice(0, cursorIndex) + v + currentInput.slice(cursorIndex);
+            cursorIndex++;
+        }
+        updateUI();
+    }
+
+    function addOp(op) {
+        haptic();
+        const char = op === '*' ? '×' : op === '/' ? '÷' : op;
+        currentInput = currentInput.slice(0, cursorIndex) + char + currentInput.slice(cursorIndex);
+        cursorIndex++;
+        updateUI();
+    }
+
+    function backspace() {
+        haptic();
+        if (cursorIndex > 0) {
+            currentInput = currentInput.slice(0, cursorIndex - 1) + currentInput.slice(cursorIndex) || "0";
+            if (currentInput === "") { currentInput = "0"; cursorIndex = 1; }
+            else cursorIndex--;
+            updateUI();
+        }
+    }
+
+    function clearAll() {
+        haptic();
+        currentInput = "0"; cursorIndex = 1; expressionEl.innerText = "";
+        selectedDriver = null;
+        document.getElementById('statName').innerText = "সিলেক্ট নেই";
+        document.getElementById('statTare').innerText = "গাড়ি: 0 কেজি";
+        updateUI(); renderDrivers();
+    }
+
+    function execute() {
+        haptic();
+        try {
+            const raw = currentInput.replace(/×/g, '*').replace(/÷/g, '/');
+            const res = eval(raw);
+            expressionEl.innerText = currentInput + " =";
+            currentInput = res.toString();
+            cursorIndex = currentInput.length;
+            updateUI();
+        } catch (e) { showToast("হিসাবে ভুল!"); }
+    }
+
+    // --- ইন্টারঅ্যাকশন ---
+    function handleDisplayClick(e) {
+        const rect = displayEl.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const fs = parseFloat(window.getComputedStyle(displayEl).fontSize);
+        const cw = fs * 0.55; 
+        cursorIndex = Math.round(clickX / cw);
+        updateUI();
+    }
+
+    function updateUI() {
+        cursorIndex = Math.max(0, Math.min(cursorIndex, currentInput.length));
+        displayEl.innerHTML = `${currentInput.slice(0, cursorIndex)}<span class="cursor"></span>${currentInput.slice(cursorIndex)}`;
+        
+        let val = 0;
+        try { val = eval(currentInput.replace(/×/g, '*').replace(/÷/g, '/')) || 0; } catch(e) { val = 0; }
+        
+        if (selectedDriver) {
+            // গাড়ির ওজন বাম পাশে সেট করা
+            tareEl.innerText = selectedDriver.weight;
+            // নিট ওজন ডান পাশে সেট করা
+            netEl.innerText = Math.max(0, val - selectedDriver.weight);
+            document.getElementById('statusPulse').style.background = "#10b981";
+        } else {
+            tareEl.innerText = "0";
+            netEl.innerText = "0";
+            document.getElementById('statusPulse').style.background = "#475569";
+        }
+    }
+
+    // --- ড্রাইভার লিস্ট ---
+    function renderDrivers(list = drivers) {
+        const cont = document.getElementById('driverScroll');
+        cont.innerHTML = "";
+        list.forEach((d, i) => {
+            const card = document.createElement('div');
+            card.className = `driver-card ${selectedDriver && selectedDriver.id === d.id ? 'active' : ''}`;
+            card.onclick = () => handleDriverTap(d);
+            card.innerHTML = `<div><div style="font-size:10px; color:#94a3b8;">#${i+1}</div><div class="card-name">${d.name}</div></div><div class="card-weight">${d.weight} কেজি</div>`;
+            cont.appendChild(card);
+        });
+    }
+
+    function handleDriverTap(driver) {
+        haptic();
+        const id = driver.id;
+        const now = Date.now();
+        const rec = tapRecords[id] || { count: 0, last: 0 };
+        if (now - rec.last > 800) rec.count = 1; else rec.count++;
+        rec.last = now;
+        tapRecords[id] = rec;
+        if (rec.count >= 3 && rec.count < 8) showToast(`মুছতে আরও ${8 - rec.count} বার ট্যাপ করুন`);
+        if (rec.count === 8) { rec.count = 0; openModal(driver); return; }
+        selectedDriver = driver;
+        document.getElementById('statName').innerText = driver.name;
+        document.getElementById('statTare').innerText = `গাড়ি: ${driver.weight} কেজি`;
+        updateUI(); renderDrivers();
+    }
+
+    function openModal(driver) {
+        document.getElementById('modalText').innerText = `"${driver.name}" (${driver.weight} কেজি) কি তালিকা থেকে মুছে ফেলবেন?`;
+        document.getElementById('deleteModal').style.display = 'flex';
+        document.getElementById('confirmDeleteBtn').onclick = () => {
+            haptic();
+            drivers = drivers.filter(x => x.id !== driver.id);
+            save();
+            if (selectedDriver && selectedDriver.id === driver.id) {
+                selectedDriver = null;
+                document.getElementById('statName').innerText = "সিলেক্ট নেই";
+                document.getElementById('statTare').innerText = "গাড়ি: 0 কেজি";
+            }
+            renderDrivers(); closeModal(); updateUI();
+        };
+    }
+
+    function closeModal() { haptic(); document.getElementById('deleteModal').style.display = 'none'; }
+
+    function addNewDriver() {
+        haptic();
+        const n = document.getElementById('newName');
+        const w = document.getElementById('newWeight');
+        if (n.value && w.value) {
+            drivers.push({ id: createId(), name: n.value, weight: parseInt(w.value) });
+            save(); n.value = ""; w.value = "";
+            renderDrivers(); showToast("যুক্ত হয়েছে");
+        }
+    }
+
+    function filterDrivers() {
+        const q = document.getElementById('search').value.toLowerCase();
+        renderDrivers(drivers.filter(d => d.name.toLowerCase().includes(q)));
+    }
+
+    function showToast(m) {
+        const t = document.getElementById('toast');
+        t.innerText = m; t.style.opacity = '1';
+        setTimeout(() => t.style.opacity = '0', 2000);
+    }
+
+    // Clipboard Support
+    window.addEventListener('copy', (e) => {
+        e.preventDefault();
+        e.clipboardData.setData('text/plain', currentInput);
+        showToast("কপি হয়েছে");
+    });
+
+    window.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        const clean = text.replace(/[^0-9.+\-*/×÷]/g, '');
+        if (clean) {
+            currentInput = currentInput.slice(0, cursorIndex) + clean + currentInput.slice(cursorIndex);
+            cursorIndex += clean.length;
+            updateUI();
+            showToast("পেস্ট হয়েছে");
+        }
+    });
+
+    window.onload = () => { renderDrivers(); updateUI(); };
+</script>
+</body>
+</html>
+
